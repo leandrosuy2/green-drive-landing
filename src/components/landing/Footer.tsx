@@ -1,4 +1,4 @@
-import { Car, Phone, Mail, MapPin, Facebook, Instagram, Youtube } from "lucide-react";
+import { Phone, Mail, MapPin, Facebook, Instagram, Youtube } from "lucide-react";
 
 const Footer = () => {
   return (
@@ -7,11 +7,12 @@ const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
           {/* Brand */}
           <div>
-            <div className="flex items-center gap-2 mb-6">
-              <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center">
-                <Car className="w-6 h-6 text-primary-foreground" />
-              </div>
-              <span className="font-heading text-xl font-bold">KL Rent a Car</span>
+            <div className="flex items-center mb-6">
+              <img
+                src="https://sistema.klrentacar.com.br/logo/logo-branco-new-semfundo.png"
+                alt="KL Rent a Car"
+                className="h-10 w-auto"
+              />
             </div>
             <p className="text-background/70 mb-6">
               Sua locadora de confiança. Aluguel de carros rápido, simples e seguro.
@@ -57,7 +58,7 @@ const Footer = () => {
             <ul className="space-y-4">
               <li className="flex items-center gap-3 text-background/70">
                 <Phone className="w-5 h-5 text-primary" />
-                <span>(11) 99999-9999</span>
+                <span>(92) 98400-8890</span>
               </li>
               <li className="flex items-center gap-3 text-background/70">
                 <Mail className="w-5 h-5 text-primary" />
@@ -65,7 +66,12 @@ const Footer = () => {
               </li>
               <li className="flex items-start gap-3 text-background/70">
                 <MapPin className="w-5 h-5 text-primary flex-shrink-0" />
-                <span>Av. Principal, 1000<br />São Paulo - SP</span>
+                <span>
+                  MATRIZ - MANAUS/AM<br />
+                  Praça 14 de Janeiro - Av. Tarumã, 1585<br />
+                  CEP: 69020-000<br />
+                  CNPJ: 04.819.323/0001-62
+                </span>
               </li>
             </ul>
           </div>

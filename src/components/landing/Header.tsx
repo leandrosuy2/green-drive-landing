@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Car, Menu, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navLinks = [
@@ -34,19 +34,15 @@ const Header = () => {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between">
           {/* Logo */}
-          <a href="#" className="flex items-center gap-2">
-            <div className={cn(
-              "w-10 h-10 rounded-lg flex items-center justify-center transition-colors",
-              isScrolled ? "bg-primary" : "bg-primary"
-            )}>
-              <Car className="w-6 h-6 text-primary-foreground" />
-            </div>
-            <span className={cn(
-              "font-heading text-xl font-bold transition-colors",
-              isScrolled ? "text-foreground" : "text-background"
-            )}>
-              KL Rent a Car
-            </span>
+          <a href="#" className="flex items-center">
+            <img
+              src="https://sistema.klrentacar.com.br/logo/logo-branco-new-semfundo.png"
+              alt="KL Rent a Car"
+              className={cn(
+                "h-10 w-auto transition-all duration-300",
+                isScrolled ? "brightness-0" : "brightness-100"
+              )}
+            />
           </a>
 
           {/* Desktop Nav */}

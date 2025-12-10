@@ -1,58 +1,10 @@
-# Welcome to your Lovable project
+# KL Rent a Car - Landing Page
 
-## Project info
+Landing page para a KL Rent a Car, locadora de veículos em Manaus/AM.
 
-**URL**: https://lovable.dev/projects/49290c6c-bd4c-4cbd-ac78-d33f0efbcf3b
+## Tecnologias Utilizadas
 
-## How can I edit this code?
-
-There are several ways of editing your application.
-
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/49290c6c-bd4c-4cbd-ac78-d33f0efbcf3b) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
-
-**Edit a file directly in GitHub**
-
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
-
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
+Este projeto foi construído com:
 
 - Vite
 - TypeScript
@@ -60,14 +12,55 @@ This project is built with:
 - shadcn-ui
 - Tailwind CSS
 
-## How can I deploy this project?
+## Como executar o projeto
 
-Simply open [Lovable](https://lovable.dev/projects/49290c6c-bd4c-4cbd-ac78-d33f0efbcf3b) and click on Share -> Publish.
+### Pré-requisitos
 
-## Can I connect a custom domain to my Lovable project?
+- Node.js instalado - [instalar com nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
 
-Yes, you can!
+### Passos para executar
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+```sh
+# Passo 1: Navegar até o diretório do projeto
+cd green-drive-landing
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+# Passo 2: Instalar as dependências
+npm install
+
+# Passo 3: Iniciar o servidor de desenvolvimento
+npm run dev
+```
+
+O projeto estará disponível em `http://localhost:8080`
+
+## Scripts disponíveis
+
+- `npm run dev` - Inicia o servidor de desenvolvimento
+- `npm run build` - Cria a build de produção
+- `npm run build:dev` - Cria a build em modo desenvolvimento
+- `npm run preview` - Visualiza a build de produção
+- `npm run lint` - Executa o linter
+
+## Estrutura do Projeto
+
+```
+src/
+├── components/        # Componentes React
+│   ├── landing/      # Componentes da landing page
+│   └── ui/           # Componentes UI (shadcn)
+├── pages/            # Páginas da aplicação
+├── hooks/            # Custom hooks
+├── lib/              # Utilitários
+└── assets/           # Imagens e recursos estáticos
+```
+
+## Deploy
+
+Para fazer o deploy do projeto, você pode usar serviços como:
+
+- Vercel
+- Netlify
+- GitHub Pages
+- AWS Amplify
+
+Basta fazer o build do projeto (`npm run build`) e fazer o upload da pasta `dist` gerada.
