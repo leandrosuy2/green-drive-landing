@@ -1,46 +1,43 @@
 import { Button } from "@/components/ui/button";
-import { Users, Fuel, Settings } from "lucide-react";
-
-const vehicles = [
-  {
-    id: 1,
-    name: "Fiat Mobi",
-    category: "Econômico",
-    image: "https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=400&h=300&fit=crop",
-    seats: 5,
-    fuel: "Flex",
-    transmission: "Manual",
-  },
-  {
-    id: 2,
-    name: "Hyundai HB20",
-    category: "Compacto",
-    image: "https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=400&h=300&fit=crop",
-    seats: 5,
-    fuel: "Flex",
-    transmission: "Automático",
-  },
-  {
-    id: 3,
-    name: "Toyota Corolla",
-    category: "Sedan",
-    image: "https://images.unsplash.com/photo-1590362891991-f776e747a588?w=400&h=300&fit=crop",
-    seats: 5,
-    fuel: "Híbrido",
-    transmission: "Automático",
-  },
-  {
-    id: 4,
-    name: "Jeep Compass",
-    category: "SUV",
-    image: "https://images.unsplash.com/photo-1519641471654-76ce0107ad1b?w=400&h=300&fit=crop",
-    seats: 5,
-    fuel: "Diesel",
-    transmission: "Automático",
-  },
-];
+import { MapPin, Key } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { frotaService } from "@/services/frotaService";
+import { Veiculo } from "@/types/frota";
+import { useToast } from "@/hooks/use-toast";
+import { encodeId } from "@/lib/encode";
 
 const Fleet = () => {
+  const [vehicles, setVehicles] = useState<Veiculo[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const carregarVeiculos = async () => {
+      try {
+        const data = await frotaService.listarVeiculos();
+        // Agrupa por nome único (pega apenas um de cada grupo)
+        const veiculosUnicos = data.reduce((acc: Veiculo[], veiculo) => {
+          if (!acc.find(v => v.nome === veiculo.nome)) {
+            acc.push(veiculo);
+          }
+          return acc;
+        }, []);
+        setVehicles(veiculosUnicos.slice(0, 4)); // Mostra apenas 4 grupos
+      } catch (error) {
+        toast({
+          variant: "destructive",
+          title: "Erro ao carregar frota",
+          description: "Não foi possível carregar os veículos disponíveis.",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    carregarVeiculos();
+  }, [toast]);
   return (
     <section id="frota" className="py-20 md:py-28 bg-background">
       <div className="container mx-auto px-4">
@@ -57,54 +54,80 @@ const Fleet = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {vehicles.map((vehicle, index) => (
-            <div
-              key={vehicle.id}
-              className="group bg-card rounded-xl overflow-hidden shadow-soft hover-lift border border-border/50"
-              style={{ animationDelay: `${index * 0.1}s` }}
-            >
-              <div className="relative h-48 overflow-hidden">
-                <img
-                  src={vehicle.image}
-                  alt={`${vehicle.name} disponível para alugar`}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                />
-                <span className="absolute top-3 left-3 px-3 py-1 bg-primary text-primary-foreground text-xs font-semibold rounded-full">
-                  {vehicle.category}
-                </span>
-              </div>
-              
-              <div className="p-5">
-                <h3 className="font-heading text-xl font-bold text-foreground mb-3">
-                  {vehicle.name}
-                </h3>
-                
-                <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
-                  <div className="flex items-center gap-1">
-                    <Users className="w-4 h-4" />
-                    <span>{vehicle.seats}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Fuel className="w-4 h-4" />
-                    <span>{vehicle.fuel}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Settings className="w-4 h-4" />
-                    <span>{vehicle.transmission}</span>
-                  </div>
+        {loading ? (
+          <div className="col-span-full text-center py-12">
+            <p className="text-muted-foreground">Carregando veículos...</p>
+          </div>
+        ) : vehicles.length === 0 ? (
+          <div className="col-span-full text-center py-12">
+            <p className="text-muted-foreground">Nenhum veículo disponível no momento.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {vehicles.map((vehicle, index) => (
+              <div
+                key={`${vehicle.id}-${vehicle.estadoId}-${index}`}
+                className="group bg-card rounded-xl overflow-hidden shadow-soft hover-lift border border-border/50"
+                style={{ animationDelay: `${index * 0.1}s` }}
+              >
+                <div className="relative h-48 overflow-hidden bg-muted">
+                  <img
+                    src={`/${vehicle.imagem}`}
+                    alt={`Grupo ${vehicle.nome} disponível para alugar`}
+                    className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.src = 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=400&h=300&fit=crop';
+                    }}
+                  />
+                  <span className="absolute top-3 left-3 px-3 py-1 bg-primary text-primary-foreground text-xs font-semibold rounded-full">
+                    Grupo {vehicle.nome}
+                  </span>
                 </div>
                 
-                <Button variant="default" className="w-full">
-                  Reservar
-                </Button>
+                <div className="p-5">
+                  <h3 className="font-heading text-xl font-bold text-foreground mb-1">
+                    Grupo {vehicle.nome}
+                  </h3>
+                  {vehicle.descricao && (
+                    <p className="text-xs text-muted-foreground mb-3 line-clamp-2">
+                      {vehicle.descricao}
+                    </p>
+                  )}
+                  
+                  <div className="flex items-center justify-between text-sm text-muted-foreground mb-4 pt-2 border-t border-border/50">
+                    <div className="flex items-center gap-1.5">
+                      <Key className="w-4 h-4 text-primary" />
+                      <span className="font-semibold text-foreground text-base">R$ {vehicle.valorLocacao}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <MapPin className="w-3.5 h-3.5" />
+                      <span className="text-xs">{vehicle.estado}</span>
+                    </div>
+                  </div>
+                  
+                  <Button 
+                    variant="default" 
+                    className="w-full"
+                    onClick={() => {
+                      const encoded = encodeId(vehicle.id, vehicle.estadoId);
+                      navigate(`/frota/${encoded}`);
+                    }}
+                  >
+                    Reservar
+                  </Button>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
 
         <div className="text-center mt-12">
-          <Button variant="outline" size="lg">
+          <Button 
+            variant="outline" 
+            size="lg"
+            onClick={() => window.location.href = '/frota'}
+          >
             Ver todos os veículos
           </Button>
         </div>
