@@ -10,11 +10,20 @@ export const reservaService = {
     return response.data;
   },
 
+
   /**
    * Busca reservas do usuário
    */
   minhasReservas: async (): Promise<ReservaResponse[]> => {
     const response = await api.get<ReservaResponse[]>("/reserva/minhas");
+    return response.data;
+  },
+
+  /**
+   * Busca todas as reservas (admin ou painel)
+   */
+  listarReservas: async (): Promise<ReservaResponse[]> => {
+    const response = await api.get<ReservaResponse[]>("/reserva");
     return response.data;
   },
 
@@ -29,7 +38,10 @@ export const reservaService = {
   /**
    * Cancela uma reserva
    */
-  cancelarReserva: async (id: number): Promise<void> => {
-    await api.delete(`/reserva/${id}`);
+  /**
+   * Cancela uma reserva com motivo
+   */
+  cancelarReserva: async (id: number, motivo: string): Promise<void> => {
+    await api.patch(`/reserva/${id}/cancelar`, { motivo });
   },
 };

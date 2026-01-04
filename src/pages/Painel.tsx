@@ -4,6 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { authService } from "@/services/authService";
 import { reservaService } from "@/services/reservaService";
+import { CancelReservationModal } from "@/components/landing/CancelReservationModal";
+import { useToast } from "@/hooks/use-toast";
 import { ReservaResponse } from "@/types/reserva";
 import { 
   LayoutDashboard, 
@@ -32,6 +34,39 @@ const Painel = () => {
   const [user, setUser] = useState(authService.getUser());
   const [reservas, setReservas] = useState<ReservaResponse[]>([]);
   const [loadingReservas, setLoadingReservas] = useState(false);
+  const [cancelModalOpen, setCancelModalOpen] = useState(false);
+  const [cancelLoading, setCancelLoading] = useState(false);
+  const [reservaIdParaCancelar, setReservaIdParaCancelar] = useState<number | null>(null);
+  const { toast } = useToast();
+  // Abrir modal de cancelamento
+  const abrirModalCancelar = (idReserva: number) => {
+    setReservaIdParaCancelar(idReserva);
+    setCancelModalOpen(true);
+  };
+
+  // Cancelar reserva
+  const handleCancelarReserva = async (motivo: string) => {
+    if (!reservaIdParaCancelar) return;
+    setCancelLoading(true);
+    try {
+      await reservaService.cancelarReserva(reservaIdParaCancelar, motivo);
+      toast({
+        title: "Reserva cancelada",
+        description: "A reserva foi cancelada com sucesso.",
+      });
+      setCancelModalOpen(false);
+      setReservaIdParaCancelar(null);
+      carregarReservas();
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Erro ao cancelar",
+        description: error.response?.data?.message || "Não foi possível cancelar a reserva.",
+      });
+    } finally {
+      setCancelLoading(false);
+    }
+  };
 
   useEffect(() => {
     // Verificar se está autenticado
@@ -67,7 +102,8 @@ const Painel = () => {
   const carregarReservas = async () => {
     try {
       setLoadingReservas(true);
-      const data = await reservaService.minhasReservas();
+      // Buscar todas as reservas (admin ou painel)
+      const data = await reservaService.listarReservas();
       setReservas(data);
     } catch (error) {
       console.error("Erro ao carregar reservas:", error);
@@ -207,7 +243,9 @@ const Painel = () => {
         </Card>
       ) : (
         <div className="space-y-4">
-          {reservas.map((reserva) => (
+          {[...reservas]
+            .sort((a, b) => b.id - a.id)
+            .map((reserva) => (
             <Card key={reserva.id} className="hover:shadow-lg transition-shadow">
               <CardHeader className="bg-gray-50">
                 <div className="flex items-start justify-between">
@@ -215,6 +253,23 @@ const Painel = () => {
                     <div className="flex items-center gap-3 mb-2">
                       <CardTitle className="text-xl">Reserva #{reserva.id}</CardTitle>
                       {getStatusBadge(reserva.status)}
+                      {reserva.status === "pendente" && (
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          className="ml-2"
+                          onClick={() => abrirModalCancelar(reserva.id)}
+                          disabled={cancelLoading && reservaIdParaCancelar === reserva.id}
+                        >
+                          Cancelar
+                        </Button>
+                      )}
+                          <CancelReservationModal
+                            open={cancelModalOpen}
+                            onClose={() => setCancelModalOpen(false)}
+                            onCancel={handleCancelarReserva}
+                            loading={cancelLoading}
+                          />
                     </div>
                     <p className="text-sm text-gray-600">
                       Registrada em {formatarDataHora(reserva.dataRegistro)}
@@ -245,8 +300,16 @@ const Painel = () => {
                           <span className="font-semibold">{reserva.grupo.nome}</span>
                         </div>
                         <div className="flex items-center gap-2 text-sm text-gray-600">
-                          <Shield className="w-3 h-3" />
-                          <span>Seguro: Tipo {reserva.seguro}</span>
+                          <Shield className={`w-3 h-3 ${reserva.seguro === "1" ? "text-blue-500" : reserva.seguro === "2" ? "text-yellow-500" : "text-gray-400"}`} />
+                          {reserva.seguro === "1" && (
+                            <span className="font-semibold text-blue-700 bg-blue-100 px-2 py-0.5 rounded">Seguro Básico</span>
+                          )}
+                          {reserva.seguro === "2" && (
+                            <span className="font-semibold text-yellow-700 bg-yellow-100 px-2 py-0.5 rounded">Seguro Premium</span>
+                          )}
+                          {reserva.seguro !== "1" && reserva.seguro !== "2" && (
+                            <span className="text-gray-500">Sem seguro</span>
+                          )}
                         </div>
                         <div className="text-sm text-gray-600 mt-1">
                           Categoria: <span className="capitalize">{reserva.categoria}</span>
