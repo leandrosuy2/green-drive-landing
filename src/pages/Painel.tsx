@@ -3,6 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { authService } from "@/services/authService";
+import { reservaService } from "@/services/reservaService";
+import { ReservaResponse } from "@/types/reserva";
 import { 
   LayoutDashboard, 
   Car, 
@@ -15,13 +17,21 @@ import {
   TrendingUp,
   DollarSign,
   Calendar,
-  Activity
+  Activity,
+  MapPin,
+  Clock,
+  Shield,
+  CheckCircle,
+  XCircle,
+  AlertCircle
 } from "lucide-react";
 
 const Painel = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeMenu, setActiveMenu] = useState("dashboard");
   const [user, setUser] = useState(authService.getUser());
+  const [reservas, setReservas] = useState<ReservaResponse[]>([]);
+  const [loadingReservas, setLoadingReservas] = useState(false);
 
   useEffect(() => {
     // Verificar se está autenticado
@@ -54,12 +64,75 @@ const Painel = () => {
     window.location.href = "/";
   };
 
+  const carregarReservas = async () => {
+    try {
+      setLoadingReservas(true);
+      const data = await reservaService.minhasReservas();
+      setReservas(data);
+    } catch (error) {
+      console.error("Erro ao carregar reservas:", error);
+    } finally {
+      setLoadingReservas(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeMenu === "reservas") {
+      carregarReservas();
+    }
+  }, [activeMenu]);
+
+  const getStatusBadge = (status: ReservaResponse["status"]) => {
+    const statusConfig = {
+      pendente: {
+        label: "Pendente",
+        icon: AlertCircle,
+        className: "bg-yellow-500 text-white"
+      },
+      confirmada: {
+        label: "Confirmada",
+        icon: CheckCircle,
+        className: "bg-green-500 text-white"
+      },
+      cancelada: {
+        label: "Cancelada",
+        icon: XCircle,
+        className: "bg-red-500 text-white"
+      },
+      concluida: {
+        label: "Concluída",
+        icon: CheckCircle,
+        className: "bg-blue-500 text-white"
+      }
+    };
+
+    const config = statusConfig[status];
+    const Icon = config.icon;
+
+    return (
+      <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold ${config.className}`}>
+        <Icon className="w-3 h-3" />
+        {config.label}
+      </span>
+    );
+  };
+
+  const formatarData = (data: string) => {
+    const date = new Date(data);
+    return date.toLocaleDateString("pt-BR");
+  };
+
+  const formatarDataHora = (data: string) => {
+    const date = new Date(data);
+    return date.toLocaleString("pt-BR");
+  };
+
   const menuItems = [
     { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { id: "frota", label: "Frota", icon: Car },
+    { id: "frota", label: "Locação", icon: Car },
     { id: "reservas", label: "Reservas", icon: Calendar },
-    { id: "clientes", label: "Clientes", icon: Users },
-    { id: "relatorios", label: "Relatórios", icon: FileText },
+    { id: "manutencao", label: "Manutenção", icon: Activity },
+    { id: "boletos", label: "Boletos", icon: DollarSign },
     { id: "configuracoes", label: "Configurações", icon: Settings },
   ];
 
@@ -101,6 +174,237 @@ const Painel = () => {
     { action: "Nova reserva", client: "Ana Paula", vehicle: "Grupo G/a", time: "há 2 horas" },
   ];
 
+  // Telas base para cada menu
+  const ListaLocacao = () => (
+    <div className="space-y-6">
+      <h2 className="text-2xl font-bold text-gray-900 mb-2">Locações</h2>
+      <p className="text-gray-600 mb-4">Visualize e gerencie suas locações.</p>
+      <Card>
+        <CardContent className="py-12 text-center text-gray-400">
+          <Car className="w-16 h-16 mx-auto mb-4" />
+          <h3 className="text-xl font-semibold mb-2">Nenhuma locação encontrada</h3>
+          <p className="text-gray-500">Você ainda não possui locações cadastradas.</p>
+        </CardContent>
+      </Card>
+    </div>
+  );
+
+  const ListaReservas = ({ reservas, loadingReservas }) => (
+    <div className="space-y-6">
+      <h2 className="text-2xl font-bold text-gray-900 mb-2">Minhas Reservas</h2>
+      <p className="text-gray-600 mb-4">Visualize e gerencie suas reservas de veículos.</p>
+      {loadingReservas ? (
+        <div className="flex items-center justify-center h-64">
+          <p className="text-gray-500">Carregando reservas...</p>
+        </div>
+      ) : reservas.length === 0 ? (
+        <Card>
+          <CardContent className="py-12 text-center text-gray-400">
+            <Calendar className="w-16 h-16 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold mb-2">Nenhuma reserva encontrada</h3>
+            <p className="text-gray-500">Você ainda não possui reservas cadastradas.</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-4">
+          {reservas.map((reserva) => (
+            <Card key={reserva.id} className="hover:shadow-lg transition-shadow">
+              <CardHeader className="bg-gray-50">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <CardTitle className="text-xl">Reserva #{reserva.id}</CardTitle>
+                      {getStatusBadge(reserva.status)}
+                    </div>
+                    <p className="text-sm text-gray-600">
+                      Registrada em {formatarDataHora(reserva.dataRegistro)}
+                    </p>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="p-6">
+                <div className="grid md:grid-cols-2 gap-6">
+                  {/* Coluna Esquerda */}
+                  <div className="space-y-4">
+                    {/* Veículo */}
+                    <div className="flex items-start gap-3 p-4 bg-gray-50 rounded-lg">
+                      <div className="w-20 h-20 bg-white rounded-lg overflow-hidden flex-shrink-0">
+                        <img
+                          src={`/${reserva.grupo.imagem}`}
+                          alt={reserva.grupo.nome}
+                          className="w-full h-full object-contain p-2"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.src = 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=200&h=200&fit=crop';
+                          }}
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Car className="w-4 h-4 text-primary" />
+                          <span className="font-semibold">{reserva.grupo.nome}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-gray-600">
+                          <Shield className="w-3 h-3" />
+                          <span>Seguro: Tipo {reserva.seguro}</span>
+                        </div>
+                        <div className="text-sm text-gray-600 mt-1">
+                          Categoria: <span className="capitalize">{reserva.categoria}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Loja */}
+                    <div className="p-4 border rounded-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <MapPin className="w-4 h-4 text-primary" />
+                        <span className="font-semibold">Loja de Retirada</span>
+                      </div>
+                      <p className="text-sm">{reserva.lojaRetirada.nome}</p>
+                      <p className="text-sm text-gray-600">
+                        {reserva.lojaRetirada.cidade} - {reserva.lojaRetirada.estado}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Coluna Direita */}
+                  <div className="space-y-4">
+                    {/* Período */}
+                    <div className="p-4 border rounded-lg bg-primary/5">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Calendar className="w-4 h-4 text-primary" />
+                        <span className="font-semibold">Período de Locação</span>
+                      </div>
+                      
+                      <div className="space-y-3">
+                        <div>
+                          <p className="text-xs text-gray-600 mb-1">Retirada</p>
+                          <div className="flex items-center gap-2">
+                            <Calendar className="w-4 h-4 text-green-600" />
+                            <span className="font-medium">
+                              {formatarData(reserva.periodo.retirada.data)}
+                            </span>
+                            <Clock className="w-4 h-4 text-gray-400 ml-2" />
+                            <span className="text-sm text-gray-600">
+                              {reserva.periodo.retirada.hora}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div>
+                          <p className="text-xs text-gray-600 mb-1">Devolução</p>
+                          <div className="flex items-center gap-2">
+                            <Calendar className="w-4 h-4 text-red-600" />
+                            <span className="font-medium">
+                              {formatarData(reserva.periodo.devolucao.data)}
+                            </span>
+                            <Clock className="w-4 h-4 text-gray-400 ml-2" />
+                            <span className="text-sm text-gray-600">
+                              {reserva.periodo.devolucao.hora}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 pt-3 border-t">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-gray-600">Total de dias:</span>
+                          <span className="font-bold text-lg text-primary">
+                            {reserva.qtdDias} {reserva.qtdDias === 1 ? 'dia' : 'dias'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Informações Adicionais */}
+                    <div className="p-4 border rounded-lg space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">Origem:</span>
+                        <span className="font-medium capitalize">{reserva.origem}</span>
+                      </div>
+                      {reserva.planoId > 0 && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">Plano:</span>
+                          <span className="font-medium">#{reserva.planoId}</span>
+                        </div>
+                      )}
+                      {reserva.valorDoado && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">Valor Doado:</span>
+                          <span className="font-medium text-green-600">
+                            R$ {parseFloat(reserva.valorDoado).toFixed(2)}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Cancelamento */}
+                    {reserva.cancelamento && (
+                      <div className="p-4 border border-red-200 bg-red-50 rounded-lg">
+                        <div className="flex items-center gap-2 mb-2">
+                          <XCircle className="w-4 h-4 text-red-600" />
+                          <span className="font-semibold text-red-900">Cancelamento</span>
+                        </div>
+                        <p className="text-sm text-red-800 mb-1">
+                          Data: {formatarDataHora(reserva.cancelamento.data)}
+                        </p>
+                        <p className="text-sm text-red-700">
+                          Motivo: {reserva.cancelamento.motivo}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  const ListaManutencao = () => (
+    <div className="space-y-6">
+      <h2 className="text-2xl font-bold text-gray-900 mb-2">Manutenção</h2>
+      <p className="text-gray-600 mb-4">Visualize e gerencie as manutenções dos veículos.</p>
+      <Card>
+        <CardContent className="py-12 text-center text-gray-400">
+          <Activity className="w-16 h-16 mx-auto mb-4" />
+          <h3 className="text-xl font-semibold mb-2">Nenhuma manutenção cadastrada</h3>
+          <p className="text-gray-500">Nenhuma manutenção registrada até o momento.</p>
+        </CardContent>
+      </Card>
+    </div>
+  );
+
+  const ListaBoletos = () => (
+    <div className="space-y-6">
+      <h2 className="text-2xl font-bold text-gray-900 mb-2">Boletos</h2>
+      <p className="text-gray-600 mb-4">Visualize e gerencie seus boletos.</p>
+      <Card>
+        <CardContent className="py-12 text-center text-gray-400">
+          <DollarSign className="w-16 h-16 mx-auto mb-4" />
+          <h3 className="text-xl font-semibold mb-2">Nenhum boleto encontrado</h3>
+          <p className="text-gray-500">Você ainda não possui boletos cadastrados.</p>
+        </CardContent>
+      </Card>
+    </div>
+  );
+
+  const ListaConfiguracoes = () => (
+    <div className="space-y-6">
+      <h2 className="text-2xl font-bold text-gray-900 mb-2">Configurações</h2>
+      <p className="text-gray-600 mb-4">Gerencie suas preferências e configurações do sistema.</p>
+      <Card>
+        <CardContent className="py-12 text-center text-gray-400">
+          <Settings className="w-16 h-16 mx-auto mb-4" />
+          <h3 className="text-xl font-semibold mb-2">Nenhuma configuração personalizada</h3>
+          <p className="text-gray-500">Personalize o sistema conforme suas necessidades.</p>
+        </CardContent>
+      </Card>
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-gray-50 flex">
       {/* Sidebar */}
@@ -135,13 +439,18 @@ const Painel = () => {
           <div className="flex items-center gap-3">
             <Avatar>
               <AvatarFallback className="bg-primary text-primary-foreground">
-                {user?.nome ? user.nome.charAt(0).toUpperCase() : 'U'}
+                {(user?.nome || user?.nome_cli) ? (user.nome || user.nome_cli).charAt(0).toUpperCase() : 'U'}
               </AvatarFallback>
             </Avatar>
             {sidebarOpen && (
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-gray-900 truncate">
-                  {user?.nome || 'Usuário'}
+                  {(() => {
+                    const fullName = (user?.nome || user?.nome_cli || 'Usuário').trim();
+                    const parts = fullName.split(' ');
+                    if (parts.length === 1) return parts[0];
+                    return `${parts[0]} ${parts[parts.length - 1]}`;
+                  })()}
                 </p>
                 <p className="text-xs text-gray-500 truncate">{user?.email || ''}</p>
               </div>
@@ -158,15 +467,14 @@ const Painel = () => {
               <button
                 key={item.id}
                 onClick={() => setActiveMenu(item.id)}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
-                  isActive
-                    ? "bg-primary text-primary-foreground"
-                    : "text-gray-700 hover:bg-gray-100"
-                } ${!sidebarOpen && "justify-center"}`}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors shadow-sm
+                  ${isActive ? "bg-emerald-500 text-white shadow-md" : "text-gray-700 hover:bg-emerald-50"}
+                  ${!sidebarOpen && "justify-center"}`}
+                style={{ fontWeight: isActive ? 600 : 500, letterSpacing: 0.2 }}
               >
-                <Icon className="w-5 h-5 flex-shrink-0" />
+                <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? "text-white" : "text-emerald-600"}`} />
                 {sidebarOpen && (
-                  <span className="text-sm font-medium">{item.label}</span>
+                  <span className="text-sm font-medium tracking-wide">{item.label}</span>
                 )}
               </button>
             );
@@ -211,12 +519,12 @@ const Painel = () => {
             <div className="flex items-center gap-3">
               <Avatar>
                 <AvatarFallback className="bg-primary text-primary-foreground">
-                  {user?.nome ? user.nome.charAt(0).toUpperCase() : 'U'}
+                  {(user?.nome || user?.nome_cli) ? (user.nome || user.nome_cli).charAt(0).toUpperCase() : 'U'}
                 </AvatarFallback>
               </Avatar>
               <div className="hidden md:block">
                 <p className="text-sm font-semibold text-gray-900">
-                  {user?.nome || 'Usuário'}
+                  {(user?.nome || user?.nome_cli) || 'Usuário'}
                 </p>
                 <p className="text-xs text-gray-500">{user?.email || ''}</p>
               </div>
@@ -236,7 +544,10 @@ const Painel = () => {
 
         {/* Content */}
         <div className="p-6 space-y-6">
-          {/* Stats Grid */}
+          {activeMenu === "dashboard" && (
+            // Conteúdo do Dashboard original
+            <>
+              {/* Stats Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {stats.map((stat, index) => {
               const Icon = stat.icon;
@@ -341,6 +652,13 @@ const Painel = () => {
               </div>
             </CardContent>
           </Card>
+            </>
+          )}
+          {activeMenu === "frota" && <ListaLocacao />}
+          {activeMenu === "reservas" && <ListaReservas reservas={reservas} loadingReservas={loadingReservas} />}
+          {activeMenu === "manutencao" && <ListaManutencao />}
+          {activeMenu === "boletos" && <ListaBoletos />}
+          {activeMenu === "configuracoes" && <ListaConfiguracoes />}
         </div>
       </main>
     </div>

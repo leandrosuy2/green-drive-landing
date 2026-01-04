@@ -28,10 +28,16 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Token expirado ou inválido
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('user');
-      window.location.href = '/';
+      // Apenas remover token em rotas específicas de autenticação
+      const isAuthRoute = error.config?.url?.includes('/auth/');
+
+      console.warn('[api.ts] Recebido 401 na rota:', error.config?.url, 'isAuthRoute:', isAuthRoute);
+      if (!isAuthRoute) {
+        // Não fazer logout automático em outras rotas
+        console.warn('[api.ts] Token pode estar expirado. Tentando renovar...');
+      } else {
+        console.warn('[api.ts] 401 em rota de autenticação. Token será removido.');
+      }
     }
     return Promise.reject(error);
   }

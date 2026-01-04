@@ -110,10 +110,15 @@ const TopNav = ({ className }: TopNavProps) => {
               <>
                 <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-white/10 rounded-full">
                   <div className="flex items-center justify-center w-7 h-7 rounded-full bg-white text-emerald-600 font-bold text-xs">
-                    {user?.nome ? user.nome.charAt(0).toUpperCase() : 'U'}
+                    {(user?.nome || user?.nome_cli) ? (user.nome || user.nome_cli).charAt(0).toUpperCase() : 'U'}
                   </div>
                   <span className="text-white font-medium text-sm">
-                    {user?.nome ? user.nome.split(' ')[0] : 'Usuário'}
+                    {(() => {
+                      const fullName = (user?.nome || user?.nome_cli || 'Usuário').trim();
+                      const parts = fullName.split(' ');
+                      if (parts.length === 1) return parts[0];
+                      return `${parts[0]} ${parts[parts.length - 1]}`;
+                    })()}
                   </span>
                 </div>
                 <button

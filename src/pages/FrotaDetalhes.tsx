@@ -21,6 +21,7 @@ import {
 import { frotaService } from "@/services/frotaService";
 import { lojaService } from "@/services/lojaService";
 import { planoService } from "@/services/planoService";
+import { reservaService } from "@/services/reservaService";
 import { Veiculo } from "@/types/frota";
 import { Loja } from "@/types/loja";
 import { Plano } from "@/types/plano";
@@ -39,9 +40,11 @@ const FrotaDetalhes = () => {
   const [planos, setPlanos] = useState<Plano[]>([]);
   const [planoSelecionado, setPlanoSelecionado] = useState<string>("");
   const [loading, setLoading] = useState(true);
+  const [reservando, setReservando] = useState(false);
   const [tipoLocacao, setTipoLocacao] = useState<"convencional" | "promocional">("convencional");
   const [tipoSeguro, setTipoSeguro] = useState<"basico" | "premium">("basico");
   const [dataRetirada, setDataRetirada] = useState<string>("");
+  const [horaRetirada, setHoraRetirada] = useState<string>("08:00");
   const [dataDevolucao, setDataDevolucao] = useState<string>("");
 
   // Função para calcular próximo dia útil (não domingo)
@@ -271,6 +274,79 @@ const FrotaDetalhes = () => {
     carregarDetalhes();
   }, [id, navigate, toast]);
 
+  // Função para criar a reserva
+  const handleReservar = async () => {
+    // Validações
+    if (!lojaSelecionada) {
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Selecione uma loja de retirada.",
+      });
+      return;
+    }
+
+    if (!dataRetirada || !dataDevolucao) {
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Selecione as datas de retirada e devolução.",
+      });
+      return;
+    }
+
+    if (tipoLocacao === "promocional" && !planoSelecionado) {
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Selecione um plano promocional.",
+      });
+      return;
+    }
+
+    try {
+      setReservando(true);
+
+      const diasLocacao = calcularDiarias();
+      
+      await reservaService.criarReserva({
+        id_loja: parseInt(lojaSelecionada),
+        loja_dev: null,
+        data_retirada: dataRetirada,
+        hora_retirada: horaRetirada,
+        data_devolucao: dataDevolucao,
+        hora_devolucao: "18:00", // Horário padrão de devolução
+        grupo_escolhido: vehicle?.id || 0,
+        plano_escolhido: planoSelecionado ? parseInt(planoSelecionado) : 0,
+        categoria: tipoSeguro,
+        vlr_doado: null,
+        seguro_escolhido: tipoSeguro === "basico" ? "1" : "2",
+        qtd_dias: diasLocacao,
+        origem_agen: "site",
+      });
+
+      toast({
+        title: "Reserva realizada!",
+        description: "Sua reserva foi criada com sucesso. Em breve você receberá um e-mail de confirmação.",
+      });
+
+      // Redirecionar para página de confirmação ou painel
+      setTimeout(() => {
+        navigate("/painel");
+      }, 2000);
+
+    } catch (error: any) {
+      console.error("Erro ao criar reserva:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro ao reservar",
+        description: error.response?.data?.message || "Não foi possível realizar a reserva. Tente novamente.",
+      });
+    } finally {
+      setReservando(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -310,11 +386,11 @@ const FrotaDetalhes = () => {
             <div>
               {/* Informações do Grupo */}
               <div className="mb-4">
-                <h2 className="text-3xl font-bold mb-2">{vehicle.estado?.sigla || 'B'}</h2>
+                <h2 className="text-3xl font-bold mb-2">{vehicle.nome}</h2>
                 <p className="text-muted-foreground mb-1">{vehicle.descricao}</p>
                 <div className="flex items-center text-muted-foreground">
                   <MapPin className="w-4 h-4 mr-1" />
-                  <span>{vehicle.estado?.nome || 'Manaus'}</span>
+                  <span>{vehicle.estado}</span>
                 </div>
               </div>
               
@@ -530,6 +606,23 @@ const FrotaDetalhes = () => {
                         </div>
 
                         <div>
+                          <Label htmlFor="horaRetirada" className="flex items-center gap-2 mb-2">
+                            <Calendar className="w-4 h-4" />
+                            Hora de Retirada
+                          </Label>
+                          <Input
+                            id="horaRetirada"
+                            type="time"
+                            value={horaRetirada}
+                            onChange={(e) => setHoraRetirada(e.target.value)}
+                            min="08:00"
+                            max="17:00"
+                            className="w-full"
+                          />
+                          <p className="text-xs text-muted-foreground mt-1">* Horário de atendimento: 8h às 17h</p>
+                        </div>
+
+                        <div>
                           <Label htmlFor="dataDevolucao" className="flex items-center gap-2 mb-2">
                             <Calendar className="w-4 h-4" />
                             Data de Devolução
@@ -586,9 +679,14 @@ const FrotaDetalhes = () => {
 
                 {/* CTA */}
                 <div className="space-y-3">
-                  <Button size="lg" className="w-full text-lg h-14">
+                  <Button 
+                    size="lg" 
+                    className="w-full text-lg h-14"
+                    onClick={handleReservar}
+                    disabled={reservando}
+                  >
                     <Calendar className="w-5 h-5 mr-2" />
-                    Reservar Agora
+                    {reservando ? "Reservando..." : "Reservar Agora"}
                   </Button>
                 </div>
               </div>
