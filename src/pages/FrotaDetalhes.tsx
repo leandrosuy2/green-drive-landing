@@ -426,14 +426,218 @@ const FrotaDetalhes = () => {
           <div className="grid lg:grid-cols-2 gap-8">
             {/* Imagem */}
             <div>
-              {/* ...existing code... */}
+              <Card className="overflow-hidden">
+                <div className="relative h-96 bg-muted">
+                  <img
+                    src={`/${vehicle.imagem}`}
+                    alt={`Grupo ${vehicle.nome}`}
+                    className="w-full h-full object-contain"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.src = 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=400&h=300&fit=crop';
+                    }}
+                  />
+                </div>
+                <CardContent className="p-6">
+                  <div className="space-y-4">
+                    <div>
+                      <h1 className="text-3xl font-bold mb-2">Grupo {vehicle.nome}</h1>
+                      {vehicle.descricao && (
+                        <p className="text-muted-foreground">{vehicle.descricao}</p>
+                      )}
+                    </div>
+                    <Separator />
+                    <div className="flex items-center gap-4 text-sm">
+                      <div className="flex items-center gap-2">
+                        <MapPin className="w-4 h-4 text-primary" />
+                        <span>{vehicle.estado}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Key className="w-4 h-4 text-primary" />
+                        <span className="font-semibold">R$ {vehicle.valorLocacao}/dia</span>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
             {/* Informações */}
             <div>
               <div className="space-y-6">
-                {/* ...existing code... */}
-                {/* Exemplo de botão para cancelar reserva (substitua pelo local correto): */}
-                {/* <Button variant="destructive" onClick={() => abrirModalCancelar(reservaId)}>Cancelar Reserva</Button> */}
+                <Card>
+                  <CardContent className="p-6 space-y-6">
+                    <div>
+                      <h2 className="text-2xl font-bold mb-4">Fazer Reserva</h2>
+                      
+                      {/* Tipo de Locação */}
+                      <div className="space-y-2 mb-4">
+                        <Label>Tipo de Locação</Label>
+                        <div className="flex gap-2">
+                          <Button
+                            variant={tipoLocacao === "convencional" ? "default" : "outline"}
+                            className="flex-1"
+                            onClick={() => {
+                              setTipoLocacao("convencional");
+                              setPlanoSelecionado("");
+                            }}
+                          >
+                            Convencional
+                          </Button>
+                          <Button
+                            variant={tipoLocacao === "promocional" ? "default" : "outline"}
+                            className="flex-1"
+                            onClick={() => setTipoLocacao("promocional")}
+                            disabled={planos.length === 0}
+                          >
+                            Promocional
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Plano Promocional */}
+                      {tipoLocacao === "promocional" && planos.length > 0 && (
+                        <div className="space-y-2 mb-4">
+                          <Label>Plano Promocional</Label>
+                          <Select value={planoSelecionado} onValueChange={setPlanoSelecionado}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione um plano" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {planos.map((plano) => (
+                                <SelectItem key={plano.id} value={String(plano.id)}>
+                                  {plano.qtdMinDias} dias - R$ {plano.valorPretendido}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+
+                      {/* Loja de Retirada */}
+                      <div className="space-y-2 mb-4">
+                        <Label>Loja de Retirada</Label>
+                        <Select value={lojaSelecionada} onValueChange={setLojaSelecionada}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione uma loja" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {lojas.map((loja) => (
+                              <SelectItem key={loja.id} value={String(loja.id)}>
+                                <div className="flex items-center gap-2">
+                                  <Store className="w-4 h-4" />
+                                  <span>{loja.nome}</span>
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Data e Hora de Retirada */}
+                      <div className="grid grid-cols-2 gap-4 mb-4">
+                        <div className="space-y-2">
+                          <Label>Data de Retirada</Label>
+                          <Input
+                            type="date"
+                            value={dataRetirada}
+                            onChange={handleDataRetiradaChange}
+                            min={new Date().toISOString().split('T')[0]}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Hora de Retirada</Label>
+                          <Input
+                            type="time"
+                            value={horaRetirada}
+                            onChange={(e) => setHoraRetirada(e.target.value)}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Data de Devolução */}
+                      <div className="space-y-2 mb-4">
+                        <Label>Data de Devolução</Label>
+                        <Input
+                          type="date"
+                          value={dataDevolucao}
+                          onChange={handleDataDevolucaoChange}
+                          min={dataRetirada || new Date().toISOString().split('T')[0]}
+                        />
+                      </div>
+
+                      {/* Tipo de Seguro */}
+                      <div className="space-y-2 mb-4">
+                        <Label>Tipo de Seguro</Label>
+                        <div className="flex gap-2">
+                          <Button
+                            variant={tipoSeguro === "basico" ? "default" : "outline"}
+                            className="flex-1"
+                            onClick={() => setTipoSeguro("basico")}
+                          >
+                            Básico
+                          </Button>
+                          <Button
+                            variant={tipoSeguro === "premium" ? "default" : "outline"}
+                            className="flex-1"
+                            onClick={() => setTipoSeguro("premium")}
+                          >
+                            Premium
+                          </Button>
+                        </div>
+                      </div>
+
+                      <Separator />
+
+                      {/* Resumo */}
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Diárias:</span>
+                          <span className="font-semibold">{calcularDiarias()} dias</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Valor por diária:</span>
+                          <span className="font-semibold">R$ {calcularValorDiaria().toFixed(2)}</span>
+                        </div>
+                        <Separator />
+                        <div className="flex justify-between text-lg font-bold">
+                          <span>Total:</span>
+                          <span className="text-primary">R$ {calcularValorFinal()}</span>
+                        </div>
+                      </div>
+
+                      {/* Botão de Reservar */}
+                      <Button
+                        className="w-full mt-6"
+                        size="lg"
+                        onClick={handleReservar}
+                        disabled={reservando}
+                      >
+                        {reservando ? "Reservando..." : "Reservar Agora"}
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Benefícios */}
+                <Card>
+                  <CardContent className="p-6">
+                    <h3 className="font-semibold mb-4">Benefícios Inclusos</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {beneficios.map((beneficio, index) => {
+                        const Icon = beneficio.icon;
+                        return (
+                          <div key={index} className="flex flex-col items-center text-center">
+                            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-2">
+                              <Icon className="w-6 h-6 text-primary" />
+                            </div>
+                            <p className="font-semibold text-sm">{beneficio.label}</p>
+                            <p className="text-xs text-muted-foreground">{beneficio.desc}</p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
             </div>
           </div>
