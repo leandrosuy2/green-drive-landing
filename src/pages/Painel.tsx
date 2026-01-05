@@ -1,3 +1,5 @@
+import locacaoService, { Locacao } from "@/services/locacaoService";
+import ListaDocVeiculos from "./ListaDocVeiculos";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,6 +33,8 @@ import {
 const Painel = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeMenu, setActiveMenu] = useState("dashboard");
+  const [locacoes, setLocacoes] = useState<Locacao[]>([]);
+  const [loadingLocacoes, setLoadingLocacoes] = useState(false);
   const [user, setUser] = useState(authService.getUser());
   const [reservas, setReservas] = useState<ReservaResponse[]>([]);
   const [loadingReservas, setLoadingReservas] = useState(false);
@@ -38,6 +42,16 @@ const Painel = () => {
   const [cancelLoading, setCancelLoading] = useState(false);
   const [reservaIdParaCancelar, setReservaIdParaCancelar] = useState<number | null>(null);
   const { toast } = useToast();
+
+  useEffect(() => {
+    if (activeMenu === "frota") {
+      setLoadingLocacoes(true);
+      locacaoService.listarLocacoes()
+        .then(setLocacoes)
+        .catch(() => setLocacoes([]))
+        .finally(() => setLoadingLocacoes(false));
+    }
+  }, [activeMenu]);
   // Abrir modal de cancelamento
   const abrirModalCancelar = (idReserva: number) => {
     setReservaIdParaCancelar(idReserva);
@@ -168,6 +182,7 @@ const Painel = () => {
     { id: "frota", label: "Locação", icon: Car },
     { id: "reservas", label: "Reservas", icon: Calendar },
     { id: "manutencao", label: "Manutenção", icon: Activity },
+    { id: "veiculos", label: "Doc Veículos", icon: FileText },
     { id: "boletos", label: "Boletos", icon: DollarSign },
     { id: "configuracoes", label: "Configurações", icon: Settings },
   ];
@@ -215,13 +230,62 @@ const Painel = () => {
     <div className="space-y-6">
       <h2 className="text-2xl font-bold text-gray-900 mb-2">Locações</h2>
       <p className="text-gray-600 mb-4">Visualize e gerencie suas locações.</p>
-      <Card>
-        <CardContent className="py-12 text-center text-gray-400">
-          <Car className="w-16 h-16 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold mb-2">Nenhuma locação encontrada</h3>
-          <p className="text-gray-500">Você ainda não possui locações cadastradas.</p>
-        </CardContent>
-      </Card>
+      {loadingLocacoes ? (
+        <div className="flex items-center justify-center h-64">
+          <p className="text-gray-500">Carregando locações...</p>
+        </div>
+      ) : locacoes.length === 0 ? (
+        <Card>
+          <CardContent className="py-12 text-center text-gray-400">
+            <Car className="w-16 h-16 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold mb-2">Nenhuma locação encontrada</h3>
+            <p className="text-gray-500">Você ainda não possui locações cadastradas.</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-4">
+          {locacoes.map((loc) => (
+            <Card key={loc.id_loc} className="hover:shadow-lg transition-shadow">
+              <CardHeader className="bg-gray-50">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <CardTitle className="text-xl">{loc.modelo_car} ({loc.placa_car})</CardTitle>
+                      <span className="ml-2 text-xs bg-emerald-100 text-emerald-700 rounded px-2 py-1">{loc.nome_marca}</span>
+                      {loc.dataDevolucao === null || loc.dataDevolucao === undefined ? (
+                        <span className="ml-2 text-xs bg-green-100 text-green-800 rounded px-2 py-1">Aberta</span>
+                      ) : (
+                        <span className="ml-2 text-xs bg-red-100 text-red-700 rounded px-2 py-1">Fechada</span>
+                      )}
+                    </div>
+                    <p className="text-sm text-gray-600">
+                      Categoria: {loc.descricao_ctg}
+                    </p>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="p-6">
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">Data Locação:</span>
+                      <span>{new Date(loc.dataLoc).toLocaleString("pt-BR")}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">Previsão Devolução:</span>
+                      <span>{new Date(loc.dataPrev).toLocaleString("pt-BR")}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">Data Devolução:</span>
+                      <span>{new Date(loc.dataDevolucao).toLocaleString("pt-BR")}</span>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 
@@ -720,6 +784,7 @@ const Painel = () => {
           {activeMenu === "frota" && <ListaLocacao />}
           {activeMenu === "reservas" && <ListaReservas reservas={reservas} loadingReservas={loadingReservas} />}
           {activeMenu === "manutencao" && <ListaManutencao />}
+          {activeMenu === "veiculos" && <ListaDocVeiculos />}
           {activeMenu === "boletos" && <ListaBoletos />}
           {activeMenu === "configuracoes" && <ListaConfiguracoes />}
         </div>

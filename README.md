@@ -31,12 +31,13 @@ Landing page moderna para a KL Rent a Car, locadora de veículos em Manaus/AM co
 - Atualização em tempo real do valor total
 - Bloco informativo com quantidade de diárias e valor por dia
 
-### Integrações API
+## Integrações API
 - **Frota**: `GET /frota` (público)
 - **Detalhes**: `GET /frota/:id?estado=estadoId` (público)
 - **Lojas**: `GET /loja?id_grupo_loc=estadoId` (público)
 - **Planos**: `GET /planos?grupo_id=X&estado_id=Y` (público)
 - **Autenticação**: `POST /auth/login`, `POST /auth/register` (JWT)
+- **Locações**: `GET /locacao` (admin) — O frontend garante que todos os objetos recebidos possuem o campo `id_car` (veja detalhes em `docs/locacao-integration.md`).
 
 ## 🛠️ Tecnologias Utilizadas
 
