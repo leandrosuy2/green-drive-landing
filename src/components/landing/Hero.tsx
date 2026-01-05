@@ -53,13 +53,15 @@ const Hero = () => {
       </div>
 
       {/* Scroll Indicator */}
-      <a
-        href="#sobre"
-        className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-2 text-background/60 hover:text-primary transition-colors animate-bounce"
-      >
-        <span className="text-sm">Saiba mais</span>
-        <ChevronDown className="w-5 h-5" />
-      </a>
+      <div className="absolute bottom-4 sm:bottom-8 left-0 right-0 z-10 flex justify-center">
+        <a
+          href="#sobre"
+          className="flex flex-col items-center gap-2 text-background/60 hover:text-primary transition-colors animate-bounce"
+        >
+          <span className="text-xs sm:text-sm">Saiba mais</span>
+          <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5" />
+        </a>
+      </div>
     </section>
   );
 };
