@@ -49,6 +49,9 @@ const FrotaDetalhes = () => {
   const [dataRetirada, setDataRetirada] = useState<string>("");
   const [horaRetirada, setHoraRetirada] = useState<string>("08:00");
   const [dataDevolucao, setDataDevolucao] = useState<string>("");
+  const [cancelModalOpen, setCancelModalOpen] = useState(false);
+  const [cancelLoading, setCancelLoading] = useState(false);
+  const [reservaIdParaCancelar, setReservaIdParaCancelar] = useState<number | null>(null);
 
   // Função para calcular próximo dia útil (não domingo)
   const getProximoDiaUtil = (date: Date): Date => {
@@ -356,6 +359,35 @@ const FrotaDetalhes = () => {
       });
     } finally {
       setReservando(false);
+    }
+  };
+
+  // Abrir modal de cancelamento
+  const abrirModalCancelar = (idReserva: number) => {
+    setReservaIdParaCancelar(idReserva);
+    setCancelModalOpen(true);
+  };
+
+  // Cancelar reserva
+  const handleCancelarReserva = async (motivo: string) => {
+    if (!reservaIdParaCancelar) return;
+    setCancelLoading(true);
+    try {
+      await reservaService.cancelarReserva(reservaIdParaCancelar, motivo);
+      toast({
+        title: "Reserva cancelada",
+        description: "A reserva foi cancelada com sucesso.",
+      });
+      setCancelModalOpen(false);
+      setReservaIdParaCancelar(null);
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Erro ao cancelar",
+        description: error.response?.data?.message || "Não foi possível cancelar a reserva.",
+      });
+    } finally {
+      setCancelLoading(false);
     }
   };
 

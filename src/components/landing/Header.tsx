@@ -63,11 +63,11 @@ const Header = () => {
           </nav>
 
           {/* CTA Button */}
-          <div className="hidden md:block">
+          {/* <div className="hidden md:block">
             <Button variant="hero" size="default">
               Reservar agora
             </Button>
-          </div>
+          </div> */}
 
           {/* Mobile Menu Button */}
           <button

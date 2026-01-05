@@ -18,10 +18,10 @@ const Hero = () => {
       {/* Content */}
       <div className="container relative z-10 mx-auto px-4 py-20">
         <div className="max-w-2xl">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/20 text-primary border border-primary/30 mb-6 animate-fade-up">
+          {/* <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/20 text-primary border border-primary/30 mb-6 animate-fade-up">
             <Car className="w-4 h-4" />
             <span className="text-sm font-medium">KL Rent a Car</span>
-          </div>
+          </div> */}
           
           <h1 
             className="font-heading text-4xl md:text-5xl lg:text-6xl font-bold text-background leading-tight mb-6 animate-fade-up"
