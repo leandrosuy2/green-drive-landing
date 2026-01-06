@@ -47,7 +47,7 @@ const LoginModal = ({ isOpen, onClose, onSwitchToRegister, onSwitchToForgotPassw
       // Fecha o modal após 2 segundos do toast aparecer
       setTimeout(() => {
         onClose();
-        // Dispara evento customizado para atualizar o TopNav
+        // Dispara evento customizado para atualizar o Header
         window.dispatchEvent(new Event('storage'));
         // Recarrega para atualizar estado
         window.location.reload();

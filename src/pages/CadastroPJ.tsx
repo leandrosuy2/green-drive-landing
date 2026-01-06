@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { ArrowLeft, Building2, MapPin, Briefcase, Phone, Mail, Lock, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import TopNav from "@/components/landing/TopNav";
+import Header from "@/components/landing/Header";
 import Footer from "@/components/landing/Footer";
 
 // Lista de estados do Brasil
@@ -207,7 +207,7 @@ const CadastroPJ = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <TopNav />
+      <Header />
       <div className="pt-24 pb-12">
         <div className="container mx-auto px-4 max-w-4xl">
           {/* Header */}

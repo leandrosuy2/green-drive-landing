@@ -10,7 +10,7 @@ import { frotaService } from "@/services/frotaService";
 import { Veiculo } from "@/types/frota";
 import { useToast } from "@/hooks/use-toast";
 import { encodeId } from "@/lib/encode";
-import TopNav from "@/components/landing/TopNav";
+import Header from "@/components/landing/Header";
 import Footer from "@/components/landing/Footer";
 
 interface Filters {
@@ -113,7 +113,7 @@ const Frota = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <TopNav />
+      <Header />
       
       <div className="pt-24 pb-12">
         <div className="container mx-auto px-4">

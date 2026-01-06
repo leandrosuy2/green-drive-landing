@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { User, Building2, ArrowLeft } from "lucide-react";
-import TopNav from "@/components/landing/TopNav";
+import Header from "@/components/landing/Header";
 import Footer from "@/components/landing/Footer";
 
 const Cadastro = () => {
@@ -10,7 +10,7 @@ const Cadastro = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <TopNav />
+      <Header />
       <div className="pt-24 pb-12">
         <div className="container mx-auto px-4 max-w-4xl">
           {/* Header */}

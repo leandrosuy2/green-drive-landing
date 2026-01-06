@@ -27,7 +27,7 @@ import { Loja } from "@/types/loja";
 import { Plano } from "@/types/plano";
 import { useToast } from "@/hooks/use-toast";
 import { decodeId } from "@/lib/encode";
-import TopNav from "@/components/landing/TopNav";
+import Header from "@/components/landing/Header";
 import Footer from "@/components/landing/Footer";
 import { CancelReservationModal } from "@/components/landing/CancelReservationModal";
 
@@ -411,7 +411,7 @@ const FrotaDetalhes = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <TopNav />
+      <Header />
       <div className="pt-24 pb-12">
         <div className="container mx-auto px-4">
           {/* Breadcrumb */}
