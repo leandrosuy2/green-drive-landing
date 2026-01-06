@@ -9,6 +9,9 @@ import Index from "./pages/Index";
 import Frota from "./pages/Frota";
 import FrotaDetalhes from "./pages/FrotaDetalhes";
 import Painel from "./pages/Painel";
+import Cadastro from "./pages/Cadastro";
+import CadastroPF from "./pages/CadastroPF";
+import CadastroPJ from "./pages/CadastroPJ";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -24,6 +27,9 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/frota" element={<Frota />} />
           <Route path="/frota/:id" element={<FrotaDetalhes />} />
+          <Route path="/cadastro" element={<Cadastro />} />
+          <Route path="/cadastro/pf" element={<CadastroPF />} />
+          <Route path="/cadastro/pj" element={<CadastroPJ />} />
           <Route path="/painel" element={
             <ProtectedRoute>
               <Painel />

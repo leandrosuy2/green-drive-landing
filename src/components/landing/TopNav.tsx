@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { 
   Car, 
@@ -21,9 +22,7 @@ import { authService } from "@/services/authService";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
 const navItems = [
-  { label: "LOCAÇÃO", icon: Car, href: "#locacao" },
-  { label: "PESSOA FÍSICA", icon: User, href: "#pessoa-fisica" },
-  { label: "SEMINOVOS", icon: CarFront, href: "#seminovos" },
+  { label: "LOCAÇÃO", icon: Car, href: "/frota" },
   { label: "FREEDOM", icon: Zap, href: "http://klfreedom.com.br/", external: true },
   { label: "PARCEIRO BESTCAR", icon: Handshake, href: "https://bestcar.com.br/", external: true },
   { label: "INTEGRIDADE", icon: Shield, href: "#integridade" },
@@ -36,11 +35,13 @@ interface TopNavProps {
 }
 
 const TopNav = ({ className }: TopNavProps) => {
+  const navigate = useNavigate();
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
   const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false);
-  const [user, setUser] = useState<{ id: number; nome: string; email: string } | null>(null);
+  const [user, setUser] = useState<{ id: number; nome?: string; nome_cli?: string; email: string } | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
 
   useEffect(() => {
     // Verificar se há usuário logado
@@ -57,6 +58,16 @@ const TopNav = ({ className }: TopNavProps) => {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
+  // Detectar scroll
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 50);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   const handleOpenLogin = () => {
     setIsRegisterOpen(false);
     setIsForgotPasswordOpen(false);
@@ -64,9 +75,8 @@ const TopNav = ({ className }: TopNavProps) => {
   };
 
   const handleOpenRegister = () => {
-    setIsLoginOpen(false);
-    setIsForgotPasswordOpen(false);
-    setIsRegisterOpen(true);
+    // Redirecionar para página de cadastro ao invés de abrir modal
+    navigate("/cadastro");
   };
 
   const handleOpenForgotPassword = () => {
@@ -82,6 +92,28 @@ const TopNav = ({ className }: TopNavProps) => {
 
   const renderNavItem = (item: typeof navItems[0], onClick?: () => void) => {
     const Icon = item.icon;
+    const isInternalRoute = item.href.startsWith('/');
+    
+    if (isInternalRoute) {
+      return (
+        <button
+          key={item.href}
+          onClick={() => {
+            navigate(item.href);
+            if (onClick) onClick();
+          }}
+          className="group flex items-center gap-2 whitespace-nowrap px-3 py-2 rounded-lg transition-all hover:bg-emerald-50 active:scale-95 w-full text-left"
+        >
+          <div className="flex items-center justify-center w-8 h-8 rounded-full bg-emerald-600 shadow-md group-hover:scale-110 transition-transform flex-shrink-0">
+            <Icon className="w-4 h-4 text-white" strokeWidth={2.5} />
+          </div>
+          <span className="text-emerald-900 font-bold text-sm tracking-wide">
+            {item.label}
+          </span>
+        </button>
+      );
+    }
+    
     return (
       <a
         key={item.href}
@@ -102,24 +134,93 @@ const TopNav = ({ className }: TopNavProps) => {
 
   return (
     <>
-      <div className={cn("fixed top-0 left-0 right-0 z-50 w-full bg-gradient-to-r from-emerald-600 to-emerald-700 shadow-lg", className)}>
+      <div className={cn(
+        "fixed top-0 left-0 right-0 z-50 w-full transition-all duration-300 shadow-lg",
+        isScrolled 
+          ? "bg-white backdrop-blur-sm" 
+          : "bg-gradient-to-r from-emerald-600 to-emerald-700",
+        className
+      )}>
         <div className="w-full px-2 sm:px-4 md:px-6 lg:px-8">
-          <nav className="flex items-center justify-between py-1.5 md:py-2">
+          <nav className="flex items-center justify-between py-2 md:py-3">
+            {/* Logo */}
+            <div className="flex items-center mr-2 sm:mr-4 flex-shrink-0">
+              <a href="/" className="flex items-center">
+                <img 
+                  src="https://sistema.klrentacar.com.br/logo/logo-branco-new-semfundo.png" 
+                  alt="KL Rent a Car" 
+                  className="h-8 sm:h-10 md:h-12 object-contain cursor-pointer hover:opacity-90 transition-all duration-300"
+                  style={{ filter: isScrolled ? 'brightness(0) invert(0)' : 'brightness(0)' }}
+                />
+              </a>
+            </div>
+            
             {/* Desktop Menu */}
-            <div className="hidden lg:flex items-center justify-center flex-wrap gap-2 md:gap-3 lg:gap-4 xl:gap-6 flex-1">
+            <div className="hidden lg:flex items-center justify-center gap-0.5 xl:gap-1 flex-1">
               {navItems.map((item) => {
                 const Icon = item.icon;
+                const isInternalRoute = item.href.startsWith('/');
+                
+                if (isInternalRoute) {
+                  return (
+                    <button
+                      key={item.href}
+                      onClick={() => navigate(item.href)}
+                      className={cn(
+                        "group flex items-center gap-1 whitespace-nowrap px-2 py-1 rounded-md transition-all active:scale-95",
+                        isScrolled 
+                          ? "hover:bg-emerald-50" 
+                          : "hover:bg-white/10"
+                      )}
+                    >
+                      <div className={cn(
+                        "flex items-center justify-center w-4 h-4 rounded-full shadow-sm group-hover:scale-110 transition-transform flex-shrink-0",
+                        isScrolled 
+                          ? "bg-emerald-600" 
+                          : "bg-white"
+                      )}>
+                        <Icon className={cn(
+                          "w-2.5 h-2.5",
+                          isScrolled ? "text-white" : "text-emerald-600"
+                        )} strokeWidth={2.5} />
+                      </div>
+                      <span className={cn(
+                        "font-medium text-[11px] xl:text-xs tracking-wide transition-colors",
+                        isScrolled ? "text-emerald-900" : "text-white"
+                      )}>
+                        {item.label}
+                      </span>
+                    </button>
+                  );
+                }
+                
                 return (
                   <a
                     key={item.href}
                     href={item.href}
                     {...(item.external && { target: "_blank", rel: "noopener noreferrer" })}
-                    className="group flex items-center gap-1.5 sm:gap-2 whitespace-nowrap px-2 sm:px-3 py-1.5 sm:py-2 rounded-full transition-all hover:bg-white/10 active:scale-95"
+                    className={cn(
+                      "group flex items-center gap-1 whitespace-nowrap px-2 py-1 rounded-md transition-all active:scale-95",
+                      isScrolled 
+                        ? "hover:bg-emerald-50" 
+                        : "hover:bg-white/10"
+                    )}
                   >
-                    <div className="flex items-center justify-center w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 rounded-full bg-white shadow-md group-hover:scale-110 transition-transform flex-shrink-0">
-                      <Icon className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4 text-emerald-600" strokeWidth={2.5} />
+                    <div className={cn(
+                      "flex items-center justify-center w-4 h-4 rounded-full shadow-sm group-hover:scale-110 transition-transform flex-shrink-0",
+                      isScrolled 
+                        ? "bg-emerald-600" 
+                        : "bg-white"
+                    )}>
+                      <Icon className={cn(
+                        "w-2.5 h-2.5",
+                        isScrolled ? "text-white" : "text-emerald-600"
+                      )} strokeWidth={2.5} />
                     </div>
-                    <span className="text-white font-bold text-[10px] sm:text-xs md:text-sm tracking-wide">
+                    <span className={cn(
+                      "font-medium text-[11px] xl:text-xs tracking-wide transition-colors",
+                      isScrolled ? "text-emerald-900" : "text-white"
+                    )}>
                       {item.label}
                     </span>
                   </a>
@@ -132,10 +233,18 @@ const TopNav = ({ className }: TopNavProps) => {
               <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
                 <SheetTrigger asChild>
                   <button
-                    className="flex items-center justify-center w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 transition-all active:scale-95"
+                    className={cn(
+                      "flex items-center justify-center w-10 h-10 rounded-full transition-all active:scale-95",
+                      isScrolled 
+                        ? "bg-emerald-600 hover:bg-emerald-700" 
+                        : "bg-white/10 hover:bg-white/20"
+                    )}
                     aria-label="Abrir menu"
                   >
-                    <Menu className="w-6 h-6 text-white" strokeWidth={2.5} />
+                    <Menu className={cn(
+                      "w-6 h-6 transition-colors",
+                      isScrolled ? "text-white" : "text-white"
+                    )} strokeWidth={2.5} />
                   </button>
                 </SheetTrigger>
                 <SheetContent side="left" className="w-[85vw] sm:w-[400px] bg-white p-0">
@@ -156,11 +265,24 @@ const TopNav = ({ className }: TopNavProps) => {
               {user ? (
                 // Usuário logado
                 <>
-                  <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-white/10 rounded-full">
-                    <div className="flex items-center justify-center w-7 h-7 rounded-full bg-white text-emerald-600 font-bold text-xs">
+                  <div className={cn(
+                    "hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full transition-colors",
+                    isScrolled 
+                      ? "bg-emerald-50" 
+                      : "bg-white/10"
+                  )}>
+                    <div className={cn(
+                      "flex items-center justify-center w-7 h-7 rounded-full font-bold text-xs transition-colors",
+                      isScrolled 
+                        ? "bg-emerald-600 text-white" 
+                        : "bg-white text-emerald-600"
+                    )}>
                       {(user?.nome || user?.nome_cli) ? (user.nome || user.nome_cli).charAt(0).toUpperCase() : 'U'}
                     </div>
-                    <span className="text-white font-medium text-sm">
+                    <span className={cn(
+                      "font-medium text-sm transition-colors",
+                      isScrolled ? "text-emerald-900" : "text-white"
+                    )}>
                       {(() => {
                         const fullName = (user?.nome || user?.nome_cli || 'Usuário').trim();
                         const parts = fullName.split(' ');
@@ -171,7 +293,12 @@ const TopNav = ({ className }: TopNavProps) => {
                   </div>
                   <button
                     onClick={() => window.location.href = '/painel'}
-                    className="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 bg-white text-emerald-600 rounded-full font-bold text-xs sm:text-sm hover:bg-emerald-50 transition-all active:scale-95 whitespace-nowrap"
+                    className={cn(
+                      "flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-full font-bold text-xs sm:text-sm transition-all active:scale-95 whitespace-nowrap",
+                      isScrolled 
+                        ? "bg-emerald-600 text-white hover:bg-emerald-700" 
+                        : "bg-white text-emerald-600 hover:bg-emerald-50"
+                    )}
                   >
                     <span className="hidden sm:inline">Painel</span>
                     <span className="sm:hidden">P</span>
@@ -189,14 +316,24 @@ const TopNav = ({ className }: TopNavProps) => {
                 <>
                   <button
                     onClick={handleOpenRegister}
-                    className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 bg-white text-emerald-600 rounded-full font-bold text-xs sm:text-sm hover:bg-emerald-50 transition-all active:scale-95 whitespace-nowrap"
+                    className={cn(
+                      "flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-full font-bold text-xs sm:text-sm transition-all active:scale-95 whitespace-nowrap",
+                      isScrolled 
+                        ? "bg-emerald-600 text-white hover:bg-emerald-700" 
+                        : "bg-white text-emerald-600 hover:bg-emerald-50"
+                    )}
                   >
                     <UserPlus className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={2.5} />
                     <span className="hidden sm:inline">Cadastrar</span>
                   </button>
                   <button
                     onClick={handleOpenLogin}
-                    className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 bg-emerald-800 text-white rounded-full font-bold text-xs sm:text-sm hover:bg-emerald-900 transition-all active:scale-95 whitespace-nowrap"
+                    className={cn(
+                      "flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-full font-bold text-xs sm:text-sm transition-all active:scale-95 whitespace-nowrap",
+                      isScrolled 
+                        ? "bg-emerald-800 text-white hover:bg-emerald-900" 
+                        : "bg-emerald-800 text-white hover:bg-emerald-900"
+                    )}
                   >
                     <LogIn className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={2.5} />
                     <span className="hidden sm:inline">Logar</span>
