@@ -7,10 +7,12 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, User, MapPin, Briefcase, Phone, Mail, Lock, FileText } from "lucide-react";
+import { ArrowLeft, User, MapPin, Briefcase, Phone, Mail, Lock, FileText, Plus, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Header from "@/components/landing/Header";
 import Footer from "@/components/landing/Footer";
+import { clienteService } from "@/services/clienteService";
+import type { CadastrarClienteRequest } from "@/types/cliente";
 
 // Lista de estados do Brasil
 const estadosBrasil = [
@@ -30,9 +32,17 @@ const CadastroPF = () => {
     tipoPessoa: "PF",
     cpf: "",
     nomeCompleto: "",
+    primeiroNome: "",
     cnhNumero: "",
     cnhUf: "",
     cnhVencimento: "",
+    identidade: "",
+    orgIdentidade: "",
+    nascimento: "",
+    estadocivil: "",
+    sexo: "",
+    nomeMae: "",
+    nacionalidade: "",
     
     // Endereço
     cep: "",
@@ -42,19 +52,22 @@ const CadastroPF = () => {
     bairro: "",
     cidade: "",
     estado: "",
+    enderecoTrabalho: "",
+    pais: "Brasil",
     
     // Profissão
     descricaoProfissao: "",
+    profissao: "",
+    profissao2: "",
     
-    // Contato
-    ddd: "",
-    telefone: "",
-    nomeContato: "",
-    email: "",
+    // Contato - Arrays para múltiplos telefones e emails
+    telefones: [{ ddd: "", numero: "", nome: "" }],
+    emails: [{ email: "", descricao: "" }],
     
     // Acesso
     senha: "",
     confirmarSenha: "",
+    lojaId: "1", // Valor padrão, pode ser ajustado
     
     // Informações Adicionais
     outrasInformacoes: "",
@@ -99,7 +112,7 @@ const CadastroPF = () => {
     return value;
   };
 
-  // Função para formatar data
+  // Função para formatar data (dd/mm/aaaa)
   const formatarData = (value: string) => {
     const numbers = value.replace(/\D/g, '');
     if (numbers.length <= 8) {
@@ -108,6 +121,77 @@ const CadastroPF = () => {
         .replace(/^(\d{2})\/(\d{2})(\d)/, '$1/$2/$3');
     }
     return value;
+  };
+
+  // Função para converter data de dd/mm/aaaa para aaaa-mm-dd
+  const converterDataParaAPI = (data: string): string => {
+    if (!data || data.length < 10) return "";
+    const partes = data.split('/');
+    if (partes.length === 3 && partes[0].length === 2 && partes[1].length === 2 && partes[2].length === 4) {
+      return `${partes[2]}-${partes[1]}-${partes[0]}`;
+    }
+    return "";
+  };
+
+  // Função para remover formatação (apenas números)
+  const removerFormatacao = (valor: string): string => {
+    return valor.replace(/\D/g, '');
+  };
+
+  // Funções para gerenciar telefones
+  const adicionarTelefone = () => {
+    setFormData(prev => ({
+      ...prev,
+      telefones: [...prev.telefones, { ddd: "", numero: "", nome: "" }]
+    }));
+  };
+
+  const removerTelefone = (index: number) => {
+    if (formData.telefones.length > 1) {
+      setFormData(prev => ({
+        ...prev,
+        telefones: prev.telefones.filter((_, i) => i !== index)
+      }));
+    }
+  };
+
+  const atualizarTelefone = (index: number, field: 'ddd' | 'numero' | 'nome', value: string) => {
+    setFormData(prev => {
+      const novosTelefones = [...prev.telefones];
+      if (field === 'numero') {
+        novosTelefones[index][field] = formatarTelefone(value);
+      } else if (field === 'ddd') {
+        novosTelefones[index][field] = value.replace(/\D/g, '').slice(0, 2);
+      } else {
+        novosTelefones[index][field] = value;
+      }
+      return { ...prev, telefones: novosTelefones };
+    });
+  };
+
+  // Funções para gerenciar emails
+  const adicionarEmail = () => {
+    setFormData(prev => ({
+      ...prev,
+      emails: [...prev.emails, { email: "", descricao: "" }]
+    }));
+  };
+
+  const removerEmail = (index: number) => {
+    if (formData.emails.length > 1) {
+      setFormData(prev => ({
+        ...prev,
+        emails: prev.emails.filter((_, i) => i !== index)
+      }));
+    }
+  };
+
+  const atualizarEmail = (index: number, field: 'email' | 'descricao', value: string) => {
+    setFormData(prev => {
+      const novosEmails = [...prev.emails];
+      novosEmails[index][field] = value;
+      return { ...prev, emails: novosEmails };
+    });
   };
 
   // Buscar endereço pelo CEP
@@ -145,7 +229,7 @@ const CadastroPF = () => {
       }
     } else if (field === 'telefone') {
       formattedValue = formatarTelefone(value);
-    } else if (field === 'cnhVencimento') {
+    } else if (field === 'cnhVencimento' || field === 'nascimento') {
       formattedValue = formatarData(value);
     }
 
@@ -181,8 +265,51 @@ const CadastroPF = () => {
     }
 
     try {
-      // Aqui você faria a chamada para a API de cadastro
-      // await authService.registerPF(formData);
+      // Mapear dados do formulário para a estrutura da API
+      const dadosAPI: CadastrarClienteRequest = {
+        cep_cli: removerFormatacao(formData.cep),
+        cidade_cli: formData.cidade,
+        cpf_cli: removerFormatacao(formData.cpf),
+        senha_cli: formData.senha,
+        endereco_rua_cli: formData.rua,
+        identidade_cli: formData.identidade || undefined,
+        org_identidade_cli: formData.orgIdentidade || undefined,
+        nome_cli: formData.nomeCompleto,
+        tipo_pessoa_cli: 1, // 1 = Pessoa Física
+        loja_id_cli: parseInt(formData.lojaId) || 1,
+        bairro_cli: formData.bairro,
+        endereco_num_cli: formData.numero,
+        endereco_trabalho_cli: formData.enderecoTrabalho || undefined,
+        endereco_uf_cli: formData.estado,
+        fone_cli: formData.telefones[0] ? `${formData.telefones[0].ddd}${removerFormatacao(formData.telefones[0].numero)}` : "",
+        hab_uf_cli: formData.cnhUf,
+        hab_validade_cli: converterDataParaAPI(formData.cnhVencimento),
+        habilitacao_cli: formData.cnhNumero,
+        nascimento_cli: converterDataParaAPI(formData.nascimento) || undefined,
+        primeiro_nome: formData.primeiroNome || formData.nomeCompleto.split(' ')[0] || undefined,
+        estadocivil_cli: formData.estadocivil || undefined,
+        sexo_cli: formData.sexo || undefined,
+        nome_mae_cli: formData.nomeMae || undefined,
+        obs_cli: formData.outrasInformacoes || undefined,
+        pais_cli: formData.pais || "Brasil",
+        profissao_cli: formData.profissao || formData.descricaoProfissao || undefined,
+        profissao2_cli: formData.profissao2 || undefined,
+        fones_novos: formData.telefones
+          .filter(t => t.ddd && t.numero)
+          .map(t => ({
+            ddd_fone: t.ddd,
+            numero_fone: removerFormatacao(t.numero),
+            nome_fone: t.nome || undefined
+          })),
+        emails_novos: formData.emails
+          .filter(e => e.email)
+          .map(e => ({
+            endereco_email: e.email,
+            descricao_email: e.descricao || undefined
+          }))
+      };
+
+      await clienteService.cadastrarCliente(dadosAPI);
       
       toast({
         title: "Cadastro realizado com sucesso! ✅",
@@ -270,26 +397,126 @@ const CadastroPF = () => {
                   />
                 </div>
 
+                <div className="space-y-2">
+                  <Label htmlFor="sexo">Sexo *</Label>
+                  <Select
+                    value={formData.sexo}
+                    onValueChange={(value) => handleChange('sexo', value)}
+                    required
+                  >
+                    <SelectTrigger id="sexo">
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="M">Masculino</SelectItem>
+                      <SelectItem value="F">Feminino</SelectItem>
+                      <SelectItem value="O">Outro</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="nascimento">Data de Nascimento *</Label>
+                  <Input
+                    id="nascimento"
+                    placeholder="dd/mm/aaaa"
+                    value={formData.nascimento}
+                    onChange={(e) => handleChange('nascimento', e.target.value)}
+                    maxLength={10}
+                    required
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="identidade">RG</Label>
+                    <Input
+                      id="identidade"
+                      placeholder="RG"
+                      value={formData.identidade}
+                      onChange={(e) => handleChange('identidade', e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="orgIdentidade">Órgão Expedidor</Label>
+                    <Input
+                      id="orgIdentidade"
+                      placeholder="ÓRGÃO EXPEDITOR"
+                      value={formData.orgIdentidade}
+                      onChange={(e) => handleChange('orgIdentidade', e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="nacionalidade">Nacionalidade</Label>
+                  <Input
+                    id="nacionalidade"
+                    placeholder="NACIONALIDADE"
+                    value={formData.nacionalidade}
+                    onChange={(e) => handleChange('nacionalidade', e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="estadocivil">Estado Civil</Label>
+                  <Select
+                    value={formData.estadocivil}
+                    onValueChange={(value) => handleChange('estadocivil', value)}
+                  >
+                    <SelectTrigger id="estadocivil">
+                      <SelectValue placeholder="Solteiro(a)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Solteiro">Solteiro(a)</SelectItem>
+                      <SelectItem value="Casado">Casado(a)</SelectItem>
+                      <SelectItem value="Divorciado">Divorciado(a)</SelectItem>
+                      <SelectItem value="Viúvo">Viúvo(a)</SelectItem>
+                      <SelectItem value="União Estável">União Estável</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="profissao">Profissão</Label>
+                  <Input
+                    id="profissao"
+                    placeholder="PROFISSÃO"
+                    value={formData.profissao}
+                    onChange={(e) => handleChange('profissao', e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="nomeMae">Nome da Mãe</Label>
+                  <Input
+                    id="nomeMae"
+                    placeholder="NOME DA MÃE"
+                    value={formData.nomeMae}
+                    onChange={(e) => handleChange('nomeMae', e.target.value)}
+                  />
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="cnhNumero">CNH nº *</Label>
                     <Input
                       id="cnhNumero"
-                      placeholder="Número da CNH"
+                      placeholder="Nº CNH"
                       value={formData.cnhNumero}
                       onChange={(e) => handleChange('cnhNumero', e.target.value)}
                       required
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="cnhUf">UF (CNH) *</Label>
+                    <Label htmlFor="cnhUf">UF *</Label>
                     <Select
                       value={formData.cnhUf}
                       onValueChange={(value) => handleChange('cnhUf', value)}
                       required
                     >
                       <SelectTrigger id="cnhUf">
-                        <SelectValue placeholder="Selecione" />
+                        <SelectValue placeholder="Selecione um estado" />
                       </SelectTrigger>
                       <SelectContent>
                         {estadosBrasil.map((uf) => (
@@ -301,7 +528,7 @@ const CadastroPF = () => {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="cnhVencimento">Vencimento CNH *</Label>
+                    <Label htmlFor="cnhVencimento">Vencimento *</Label>
                     <Input
                       id="cnhVencimento"
                       placeholder="dd/mm/aaaa"
@@ -340,7 +567,7 @@ const CadastroPF = () => {
                     <Label htmlFor="rua">Rua *</Label>
                     <Input
                       id="rua"
-                      placeholder="Logradouro"
+                      placeholder="RUA"
                       value={formData.rua}
                       onChange={(e) => handleChange('rua', e.target.value)}
                       required
@@ -353,7 +580,7 @@ const CadastroPF = () => {
                     <Label htmlFor="numero">Número *</Label>
                     <Input
                       id="numero"
-                      placeholder="Número"
+                      placeholder="Nº"
                       value={formData.numero}
                       onChange={(e) => handleChange('numero', e.target.value)}
                       required
@@ -363,7 +590,7 @@ const CadastroPF = () => {
                     <Label htmlFor="complemento">Complemento</Label>
                     <Input
                       id="complemento"
-                      placeholder="Complemento (opcional)"
+                      placeholder="COMPLEMENTO"
                       value={formData.complemento}
                       onChange={(e) => handleChange('complemento', e.target.value)}
                     />
@@ -375,7 +602,7 @@ const CadastroPF = () => {
                     <Label htmlFor="bairro">Bairro *</Label>
                     <Input
                       id="bairro"
-                      placeholder="Bairro"
+                      placeholder="BAIRRO"
                       value={formData.bairro}
                       onChange={(e) => handleChange('bairro', e.target.value)}
                       required
@@ -385,7 +612,7 @@ const CadastroPF = () => {
                     <Label htmlFor="cidade">Cidade *</Label>
                     <Input
                       id="cidade"
-                      placeholder="Cidade"
+                      placeholder="CIDADE"
                       value={formData.cidade}
                       onChange={(e) => handleChange('cidade', e.target.value)}
                       required
@@ -399,7 +626,7 @@ const CadastroPF = () => {
                       required
                     >
                       <SelectTrigger id="estado">
-                        <SelectValue placeholder="Selecione" />
+                        <SelectValue placeholder="ESTADO" />
                       </SelectTrigger>
                       <SelectContent>
                         {estadosBrasil.map((uf) => (
@@ -422,77 +649,173 @@ const CadastroPF = () => {
                   Profissão / Atividade
                 </CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="profissao">Profissão Principal *</Label>
+                    <Input
+                      id="profissao"
+                      placeholder="Ex: Engenheiro"
+                      value={formData.profissao}
+                      onChange={(e) => handleChange('profissao', e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="profissao2">Profissão Secundária</Label>
+                    <Input
+                      id="profissao2"
+                      placeholder="Ex: Professor"
+                      value={formData.profissao2}
+                      onChange={(e) => handleChange('profissao2', e.target.value)}
+                    />
+                  </div>
+                </div>
                 <div className="space-y-2">
-                  <Label htmlFor="descricaoProfissao">Descrição da Profissão *</Label>
+                  <Label htmlFor="descricaoProfissao">Descreva sua Profissão</Label>
                   <Textarea
                     id="descricaoProfissao"
-                    placeholder="Ex: Advogado: atuo em direito empresarial..."
+                    placeholder="EX: Advogado : Atuo em causas de direito do consumidor, etc..."
                     value={formData.descricaoProfissao}
                     onChange={(e) => handleChange('descricaoProfissao', e.target.value)}
                     rows={4}
-                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="enderecoTrabalho">Endereço de Trabalho</Label>
+                  <Input
+                    id="enderecoTrabalho"
+                    placeholder="Ex: Av. Brasil, 123"
+                    value={formData.enderecoTrabalho}
+                    onChange={(e) => handleChange('enderecoTrabalho', e.target.value)}
                   />
                 </div>
               </CardContent>
             </Card>
 
-            {/* Contato */}
+            {/* Contato - Telefones */}
             <Card className="mb-6">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Phone className="w-5 h-5" />
-                  Contato
+                  FONE
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="ddd">DDD *</Label>
-                    <Input
-                      id="ddd"
-                      placeholder="00"
-                      value={formData.ddd}
-                      onChange={(e) => handleChange('ddd', e.target.value.replace(/\D/g, '').slice(0, 2))}
-                      maxLength={2}
-                      required
-                    />
+                {formData.telefones.map((telefone, index) => (
+                  <div key={index} className="p-4 border rounded-lg space-y-3">
+                    <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+                      <div className="md:col-span-2 space-y-2">
+                        <Label>DDD</Label>
+                        <Input
+                          placeholder="00"
+                          value={telefone.ddd}
+                          onChange={(e) => atualizarTelefone(index, 'ddd', e.target.value)}
+                          maxLength={2}
+                          required={index === 0}
+                        />
+                      </div>
+                      <div className="md:col-span-4 space-y-2">
+                        <Label>Número</Label>
+                        <Input
+                          placeholder="00000-0000"
+                          value={telefone.numero}
+                          onChange={(e) => atualizarTelefone(index, 'numero', e.target.value)}
+                          maxLength={11}
+                          required={index === 0}
+                        />
+                      </div>
+                      <div className="md:col-span-5 space-y-2">
+                        <Label>Nome</Label>
+                        <Input
+                          placeholder="Nome"
+                          value={telefone.nome}
+                          onChange={(e) => atualizarTelefone(index, 'nome', e.target.value)}
+                        />
+                      </div>
+                      <div className="md:col-span-1 flex items-end">
+                        {formData.telefones.length > 1 && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => removerTelefone(index)}
+                            className="text-destructive"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                  <div className="md:col-span-2 space-y-2">
-                    <Label htmlFor="telefone">Telefone *</Label>
-                    <Input
-                      id="telefone"
-                      placeholder="00000-0000"
-                      value={formData.telefone}
-                      onChange={(e) => handleChange('telefone', e.target.value)}
-                      maxLength={10}
-                      required
-                    />
+                ))}
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={adicionarTelefone}
+                  className="w-full"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Adicionar Telefone
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Contato - Emails */}
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Mail className="w-5 h-5" />
+                  E-mail
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {formData.emails.map((email, index) => (
+                  <div key={index} className="p-4 border rounded-lg space-y-3">
+                    <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+                      <div className="md:col-span-6 space-y-2">
+                        <Label>Email</Label>
+                        <Input
+                          type="email"
+                          placeholder="Email"
+                          value={email.email}
+                          onChange={(e) => atualizarEmail(index, 'email', e.target.value)}
+                          required={index === 0}
+                        />
+                      </div>
+                      <div className="md:col-span-5 space-y-2">
+                        <Label>Descrição</Label>
+                        <Input
+                          placeholder="Descrição"
+                          value={email.descricao}
+                          onChange={(e) => atualizarEmail(index, 'descricao', e.target.value)}
+                        />
+                      </div>
+                      <div className="md:col-span-1 flex items-end">
+                        {formData.emails.length > 1 && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => removerEmail(index)}
+                            className="text-destructive"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="nomeContato">Nome do Contato *</Label>
-                  <Input
-                    id="nomeContato"
-                    placeholder="Pessoa de referência"
-                    value={formData.nomeContato}
-                    onChange={(e) => handleChange('nomeContato', e.target.value)}
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="email">E-mail *</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="seu@email.com"
-                    value={formData.email}
-                    onChange={(e) => handleChange('email', e.target.value)}
-                    required
-                  />
-                </div>
+                ))}
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={adicionarEmail}
+                  className="w-full"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Adicionar Email
+                </Button>
               </CardContent>
             </Card>
 
@@ -501,7 +824,7 @@ const CadastroPF = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Lock className="w-5 h-5" />
-                  Acesso ao Sistema
+                  Senha (acesso ao app ou site kl)
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -541,11 +864,34 @@ const CadastroPF = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="pais">País</Label>
+                    <Input
+                      id="pais"
+                      placeholder="País"
+                      value={formData.pais}
+                      onChange={(e) => handleChange('pais', e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="lojaId">Loja *</Label>
+                    <Input
+                      id="lojaId"
+                      type="number"
+                      placeholder="ID da loja"
+                      value={formData.lojaId}
+                      onChange={(e) => handleChange('lojaId', e.target.value)}
+                      required
+                      min="1"
+                    />
+                  </div>
+                </div>
                 <div className="space-y-2">
-                  <Label htmlFor="outrasInformacoes">Outras Informações</Label>
+                  <Label htmlFor="outrasInformacoes">Outras informações:</Label>
                   <Textarea
                     id="outrasInformacoes"
-                    placeholder="Informações adicionais (opcional)"
+                    placeholder="Outras informações:"
                     value={formData.outrasInformacoes}
                     onChange={(e) => handleChange('outrasInformacoes', e.target.value)}
                     rows={3}

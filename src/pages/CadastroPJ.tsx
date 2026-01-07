@@ -7,7 +7,9 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Building2, MapPin, Briefcase, Phone, Mail, Lock, FileText } from "lucide-react";
+import { ArrowLeft, Building2, MapPin, Briefcase, Phone, Mail, Lock, FileText, Plus, Trash2 } from "lucide-react";
+import { clienteService } from "@/services/clienteService";
+import type { CadastrarClienteRequest } from "@/types/cliente";
 import { useToast } from "@/hooks/use-toast";
 import Header from "@/components/landing/Header";
 import Footer from "@/components/landing/Footer";
@@ -46,11 +48,9 @@ const CadastroPJ = () => {
     // Profissão
     descricaoProfissao: "",
     
-    // Contato
-    ddd: "",
-    telefone: "",
-    nomeContato: "",
-    email: "",
+    // Contato - Arrays para múltiplos telefones e emails
+    telefones: [{ ddd: "", numero: "", nome: "" }],
+    emails: [{ email: "", descricao: "" }],
     
     // Acesso
     senha: "",
@@ -109,6 +109,77 @@ const CadastroPJ = () => {
         .replace(/^(\d{2})\/(\d{2})(\d)/, '$1/$2/$3');
     }
     return value;
+  };
+
+  // Função para converter data de dd/mm/aaaa para aaaa-mm-dd
+  const converterDataParaAPI = (data: string): string => {
+    if (!data || data.length < 10) return "";
+    const partes = data.split('/');
+    if (partes.length === 3 && partes[0].length === 2 && partes[1].length === 2 && partes[2].length === 4) {
+      return `${partes[2]}-${partes[1]}-${partes[0]}`;
+    }
+    return "";
+  };
+
+  // Função para remover formatação (apenas números)
+  const removerFormatacao = (valor: string): string => {
+    return valor.replace(/\D/g, '');
+  };
+
+  // Funções para gerenciar telefones
+  const adicionarTelefone = () => {
+    setFormData(prev => ({
+      ...prev,
+      telefones: [...prev.telefones, { ddd: "", numero: "", nome: "" }]
+    }));
+  };
+
+  const removerTelefone = (index: number) => {
+    if (formData.telefones.length > 1) {
+      setFormData(prev => ({
+        ...prev,
+        telefones: prev.telefones.filter((_, i) => i !== index)
+      }));
+    }
+  };
+
+  const atualizarTelefone = (index: number, field: 'ddd' | 'numero' | 'nome', value: string) => {
+    setFormData(prev => {
+      const novosTelefones = [...prev.telefones];
+      if (field === 'numero') {
+        novosTelefones[index][field] = formatarTelefone(value);
+      } else if (field === 'ddd') {
+        novosTelefones[index][field] = value.replace(/\D/g, '').slice(0, 2);
+      } else {
+        novosTelefones[index][field] = value;
+      }
+      return { ...prev, telefones: novosTelefones };
+    });
+  };
+
+  // Funções para gerenciar emails
+  const adicionarEmail = () => {
+    setFormData(prev => ({
+      ...prev,
+      emails: [...prev.emails, { email: "", descricao: "" }]
+    }));
+  };
+
+  const removerEmail = (index: number) => {
+    if (formData.emails.length > 1) {
+      setFormData(prev => ({
+        ...prev,
+        emails: prev.emails.filter((_, i) => i !== index)
+      }));
+    }
+  };
+
+  const atualizarEmail = (index: number, field: 'email' | 'descricao', value: string) => {
+    setFormData(prev => {
+      const novosEmails = [...prev.emails];
+      novosEmails[index][field] = value;
+      return { ...prev, emails: novosEmails };
+    });
   };
 
   // Buscar endereço pelo CEP
@@ -182,8 +253,42 @@ const CadastroPJ = () => {
     }
 
     try {
-      // Aqui você faria a chamada para a API de cadastro
-      // await authService.registerPJ(formData);
+      // Mapear dados do formulário para a estrutura da API
+      const dadosAPI: CadastrarClienteRequest = {
+        cep_cli: removerFormatacao(formData.cep),
+        cidade_cli: formData.cidade,
+        cpf_cli: removerFormatacao(formData.cnpj), // Para PJ, o CNPJ vai no campo cpf_cli
+        senha_cli: formData.senha,
+        endereco_rua_cli: formData.rua,
+        nome_cli: formData.nomeCompleto,
+        tipo_pessoa_cli: 2, // 2 = Pessoa Jurídica
+        loja_id_cli: 1, // Valor padrão
+        bairro_cli: formData.bairro,
+        endereco_num_cli: formData.numero,
+        endereco_uf_cli: formData.estado,
+        fone_cli: formData.telefones[0] ? `${formData.telefones[0].ddd}${removerFormatacao(formData.telefones[0].numero)}` : "",
+        hab_uf_cli: formData.cnhUf,
+        hab_validade_cli: converterDataParaAPI(formData.cnhVencimento),
+        habilitacao_cli: formData.cnhNumero,
+        obs_cli: formData.outrasInformacoes || undefined,
+        pais_cli: "Brasil",
+        profissao_cli: formData.descricaoProfissao || undefined,
+        fones_novos: formData.telefones
+          .filter(t => t.ddd && t.numero)
+          .map(t => ({
+            ddd_fone: t.ddd,
+            numero_fone: removerFormatacao(t.numero),
+            nome_fone: t.nome || undefined
+          })),
+        emails_novos: formData.emails
+          .filter(e => e.email)
+          .map(e => ({
+            endereco_email: e.email,
+            descricao_email: e.descricao || undefined
+          }))
+      };
+
+      await clienteService.cadastrarCliente(dadosAPI);
       
       toast({
         title: "Cadastro realizado com sucesso! ✅",
@@ -438,62 +543,129 @@ const CadastroPJ = () => {
               </CardContent>
             </Card>
 
-            {/* Contato */}
+            {/* Contato - Telefones */}
             <Card className="mb-6">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Phone className="w-5 h-5" />
-                  Contato
+                  FONE
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="ddd">DDD *</Label>
-                    <Input
-                      id="ddd"
-                      placeholder="00"
-                      value={formData.ddd}
-                      onChange={(e) => handleChange('ddd', e.target.value.replace(/\D/g, '').slice(0, 2))}
-                      maxLength={2}
-                      required
-                    />
+                {formData.telefones.map((telefone, index) => (
+                  <div key={index} className="p-4 border rounded-lg space-y-3">
+                    <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+                      <div className="md:col-span-2 space-y-2">
+                        <Label>DDD</Label>
+                        <Input
+                          placeholder="00"
+                          value={telefone.ddd}
+                          onChange={(e) => atualizarTelefone(index, 'ddd', e.target.value)}
+                          maxLength={2}
+                          required={index === 0}
+                        />
+                      </div>
+                      <div className="md:col-span-4 space-y-2">
+                        <Label>Número</Label>
+                        <Input
+                          placeholder="00000-0000"
+                          value={telefone.numero}
+                          onChange={(e) => atualizarTelefone(index, 'numero', e.target.value)}
+                          maxLength={11}
+                          required={index === 0}
+                        />
+                      </div>
+                      <div className="md:col-span-5 space-y-2">
+                        <Label>Nome</Label>
+                        <Input
+                          placeholder="Nome"
+                          value={telefone.nome}
+                          onChange={(e) => atualizarTelefone(index, 'nome', e.target.value)}
+                        />
+                      </div>
+                      <div className="md:col-span-1 flex items-end">
+                        {formData.telefones.length > 1 && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => removerTelefone(index)}
+                            className="text-destructive"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                  <div className="md:col-span-2 space-y-2">
-                    <Label htmlFor="telefone">Telefone *</Label>
-                    <Input
-                      id="telefone"
-                      placeholder="00000-0000"
-                      value={formData.telefone}
-                      onChange={(e) => handleChange('telefone', e.target.value)}
-                      maxLength={10}
-                      required
-                    />
+                ))}
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={adicionarTelefone}
+                  className="w-full"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Adicionar Telefone
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Contato - Emails */}
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Mail className="w-5 h-5" />
+                  E-mail
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {formData.emails.map((email, index) => (
+                  <div key={index} className="p-4 border rounded-lg space-y-3">
+                    <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+                      <div className="md:col-span-6 space-y-2">
+                        <Label>Email</Label>
+                        <Input
+                          type="email"
+                          placeholder="Email"
+                          value={email.email}
+                          onChange={(e) => atualizarEmail(index, 'email', e.target.value)}
+                          required={index === 0}
+                        />
+                      </div>
+                      <div className="md:col-span-5 space-y-2">
+                        <Label>Descrição</Label>
+                        <Input
+                          placeholder="Descrição"
+                          value={email.descricao}
+                          onChange={(e) => atualizarEmail(index, 'descricao', e.target.value)}
+                        />
+                      </div>
+                      <div className="md:col-span-1 flex items-end">
+                        {formData.emails.length > 1 && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => removerEmail(index)}
+                            className="text-destructive"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="nomeContato">Nome do Contato *</Label>
-                  <Input
-                    id="nomeContato"
-                    placeholder="Pessoa de referência"
-                    value={formData.nomeContato}
-                    onChange={(e) => handleChange('nomeContato', e.target.value)}
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="email">E-mail *</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="seu@email.com"
-                    value={formData.email}
-                    onChange={(e) => handleChange('email', e.target.value)}
-                    required
-                  />
-                </div>
+                ))}
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={adicionarEmail}
+                  className="w-full"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Adicionar Email
+                </Button>
               </CardContent>
             </Card>
 
@@ -502,7 +674,7 @@ const CadastroPJ = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Lock className="w-5 h-5" />
-                  Acesso ao Sistema
+                  Senha (acesso ao app ou site kl)
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -543,10 +715,10 @@ const CadastroPJ = () => {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="outrasInformacoes">Outras Informações</Label>
+                  <Label htmlFor="outrasInformacoes">Outras informações:</Label>
                   <Textarea
                     id="outrasInformacoes"
-                    placeholder="Informações adicionais (opcional)"
+                    placeholder="Outras informações:"
                     value={formData.outrasInformacoes}
                     onChange={(e) => handleChange('outrasInformacoes', e.target.value)}
                     rows={3}
